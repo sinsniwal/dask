@@ -25,3 +25,16 @@ hdfs-initialized-indicator
 .vscode/
 .history
 env.yaml
+
+# Auto-added ignore rules
+.env
+.env.*
+*.env
+*.pem
+*.key
+secrets.toml
+client_secrets*.json
+venv/
+.venv/
+env/
+node_modules/

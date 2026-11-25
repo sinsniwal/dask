@@ -1,0 +1,37 @@
+
+# Put your MCVE code here
+import dask
+import dask.bag as db
+import river
+import pandas as pd
+# Create a Dask bag from your data
+df=pd.DataFrame([[0]*2],columns=['VendorID','fare_amount'])
+data = db.from_sequence(df, npartitions=4)
+
+def get_dask_train_test(df):
+    from dask_ml.model_selection import train_test_split
+    X = df[['VendorID', 'tpep_pickup_datetime', 'tpep_dropoff_datetime',
+           'passenger_count', 'trip_distance', 'RatecodeID', 'store_and_fwd_flag',
+           'PULocationID', 'DOLocationID', 'payment_type', 'improvement_surcharge',
+              'congestion_surcharge', 'airport_fee']]
+    y = df['fare_amount']
+    # Splitting the dataset into train and test sets (80% train, 20% test)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # Now you have X_train, X_test, y_train, and y_test ready to be used for training and testing
+    return X_train, X_test, y_train, y_test
+
+# Define a function to process and train on each partition
+def process_and_train(partition):
+    X_train,X_test,y_train,y_test=get_dask_train_test(partition)
+    model = river.linear_model.LinearRegression(optimizer=river.optim.SGD(0.01), l2=0.1)
+    # Stream learning from the DataFrame
+    for _,row in partition.iterrows():
+        y = row['fare_amount']       # Target
+        x = row.drop('fare_amount')  # Features
+        model = model.learn_one(x, y)
+    print("done")
+    return model
+if __name__=='__main__':
+    # Use Dask to process and train in parallel
+    models = data.map(process_and_train).compute()
